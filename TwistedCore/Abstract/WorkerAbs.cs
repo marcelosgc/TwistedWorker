@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Cronos;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace TwistedCore.Abstract;
@@ -6,13 +7,16 @@ namespace TwistedCore.Abstract;
 public abstract class WorkerAbs : BackgroundService
 {
     private readonly ILogger<WorkerAbs> _logger;
+    protected string _defaultCron;
     protected bool _isRunning;
     protected string _name;
+    protected DateTime _nextRun;
 
     public WorkerAbs(ILogger<WorkerAbs> logger)
     {
         _logger = logger;
         _name = "WorkerAbs";
+        _defaultCron = " */1 * * * *";
     }
 
     protected abstract void OnStart();
@@ -27,15 +31,21 @@ public abstract class WorkerAbs : BackgroundService
     {
         try
         {
+            SetNextRun();
             OnStart();
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                if (_logger.IsEnabled(LogLevel.Information))
-                    _logger.LogInformation("{name} running at: {time}", _name, DateTimeOffset.Now);
+                if (IsItTimeToExecute())
+                {
+                    if (_logger.IsEnabled(LogLevel.Information))
+                        _logger.LogInformation("{name} running at: {time}", _name, DateTimeOffset.Now);
 
-                await DoWork(stoppingToken);
-                await Task.Delay(1000, stoppingToken);
+                    await DoWork(stoppingToken);
+                    SetNextRun();
+                }
+
+                await Task.Delay(4000, stoppingToken);
             }
 
             OnStop();
@@ -44,5 +54,19 @@ public abstract class WorkerAbs : BackgroundService
         {
             OnError(e);
         }
+    }
+
+    private bool IsItTimeToExecute()
+    {
+        var utcNow = DateTime.UtcNow;
+        return utcNow >= _nextRun;
+    }
+
+    private void SetNextRun()
+    {
+        var utcNow = DateTime.UtcNow;
+        var cronExpression = CronExpression.Parse(_defaultCron);
+        _nextRun = cronExpression.GetNextOccurrence(utcNow).GetValueOrDefault();
+        _logger.LogInformation($"The CRON is {_defaultCron} and next run will be {_nextRun} ... ");
     }
 }
