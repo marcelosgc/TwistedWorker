@@ -4,3 +4,6 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .idea/
+/[L][l]ogs
+[L][l]ogs/
+*.log
