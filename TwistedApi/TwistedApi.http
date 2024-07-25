@@ -1,6 +1,6 @@
 @TwistedApi_HostAddress = http://localhost:5081
 
-GET {{TwistedApi_HostAddress}}/weatherforecast/
+GET {{TwistedApi_HostAddress}}/list-log-files
 Accept: application/json
 
 ###
